@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data (large files)
+data/raw/*.nii
+data/raw/*.nii.gz
+data/raw/*.tar.gz
+data/raw/*.zip
+data/processed/*.npy
+data/processed/*.h5
+data/processed/*.pkl
+
+# Models (large files)
+models/saved_models/*.keras
+models/saved_models/*.h5
+models/saved_models/*.pb
+models/checkpoints/*.keras
+checkpoints/*.h5
+checkpoints/*.ckpt
+
+# Logs
+logs/
+*.log
+
+# Outputs
+outputs/
+results/
+temp/
+temp_uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Frontend build
+frontend/dist/
+frontend/dist-ssr/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker
+.docker/

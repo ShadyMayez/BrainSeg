@@ -1,0 +1,52 @@
+# Docker Compose - Brain Tumor Segmentation
+# =========================================
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    image: brats-backend:latest
+    container_name: brats-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../models:/app/models
+      - ../data:/app/data
+      - backend-uploads:/app/uploads
+      - backend-outputs:/app/outputs
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DEBUG=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    image: brats-frontend:latest
+    container_name: brats-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  backend-uploads:
+  backend-outputs:
