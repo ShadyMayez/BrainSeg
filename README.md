@@ -154,6 +154,12 @@ BrainSeg/
 ```
 
 ---
+<img width="1896" height="872" alt="Untitled" src="https://github.com/user-attachments/assets/2cf14eda-5ea2-4e13-a1b1-0ddafe1d491d" />
+<img width="1894" height="870" alt="Untitled1" src="https://github.com/user-attachments/assets/973f0356-d5f3-457c-8a8d-090f7346ddd4" />
+<img width="1896" height="1080" alt="Untitled2" src="https://github.com/user-attachments/assets/b2238e57-1bc6-48ed-b62a-43305b549c70" />
+
+
+
 
 ## 📚 References
 - **U-Net**: [Ronneberger et al., 2015](https://arxiv.org/abs/1505.04597)
