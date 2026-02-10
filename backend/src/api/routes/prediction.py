@@ -1,5 +1,6 @@
 """
-Prediction endpoints for 4-channel brain tumor segmentation.
+Prediction endpoints for 2-channel brain tumor segmentation.
+Matching Kaggle notebook: uses only FLAIR and T1CE modalities.
 """
 import os
 import tempfile
@@ -31,19 +32,15 @@ def save_upload_file(upload_file: UploadFile, dest_path: Path) -> None:
 
 def process_prediction(
     flair_path: str,
-    t1_path: str,
     t1ce_path: str,
-    t2_path: str,
     classes: str = "all"
 ) -> Dict[str, Any]:
     """
-    Process prediction on uploaded files.
+    Process prediction on uploaded files (2-channel: FLAIR + T1CE).
     
     Args:
         flair_path: Path to FLAIR NIfTI file
-        t1_path: Path to T1 NIfTI file
         t1ce_path: Path to T1CE NIfTI file
-        t2_path: Path to T2 NIfTI file
         classes: Comma-separated list of classes to include
     
     Returns:
@@ -62,8 +59,8 @@ def process_prediction(
         )
     
     try:
-        # Load and preprocess images (4 channels)
-        logger.info("Preprocessing 4-channel input...")
+        # Load and preprocess images (2 channels: FLAIR + T1CE)
+        logger.info("Preprocessing 2-channel input (FLAIR + T1CE)...")
         preprocessor = BraTSPreprocessor(
             target_size=settings.TARGET_SIZE,
             volume_slices=settings.VOLUME_SLICES,
@@ -71,7 +68,7 @@ def process_prediction(
         )
         
         result = preprocessor.preprocess_for_inference(
-            flair_path, t1_path, t1ce_path, t2_path
+            flair_path, t1ce_path
         )
         input_data = result['model_input']
         original_shape = result['original_shape']
@@ -134,8 +131,8 @@ def process_prediction(
         
         return {
             "status": "success",
-            "segmentation_mask": f"/static/{mask_filename}",
-            "overlay_image": f"/static/{overlay_filename}" if overlay_filename else None,
+            "segmentation_mask": f"/outputs/{mask_filename}",
+            "overlay_image": f"/outputs/{overlay_filename}" if overlay_filename else None,
             "tumor_stats": stats,
             "class_distribution": {
                 label: stats.get(label, {"pixel_count": 0, "percentage": 0})
@@ -159,37 +156,29 @@ def process_prediction(
 async def predict(
     background_tasks: BackgroundTasks,
     flair: UploadFile = File(..., description="FLAIR modality NIfTI file"),
-    t1: UploadFile = File(..., description="T1 modality NIfTI file"),
     t1ce: UploadFile = File(..., description="T1CE modality NIfTI file"),
-    t2: UploadFile = File(..., description="T2 modality NIfTI file"),
     classes: str = Form("all", description="Comma-separated list of classes to include (default: all)")
 ):
     """
     Run tumor segmentation prediction on uploaded MRI files.
     
-    Requires all 4 modalities:
+    Requires 2 modalities (matching Kaggle notebook):
     - **flair**: FLAIR modality NIfTI file
-    - **t1**: T1 modality NIfTI file
     - **t1ce**: T1CE (contrast-enhanced) modality NIfTI file
-    - **t2**: T2 modality NIfTI file
     - **classes**: Comma-separated list of classes to include (0=Non-tumor, 1=Necrotic/Core, 2=Edema, 3=Enhancing)
     """
     temp_dir = Path(tempfile.mkdtemp())
     
     try:
-        logger.info("Received prediction request with 4 modalities")
+        logger.info("Received prediction request with 2 modalities (FLAIR + T1CE)")
         
         # Save uploaded files
         flair_path = temp_dir / flair.filename
-        t1_path = temp_dir / t1.filename
         t1ce_path = temp_dir / t1ce.filename
-        t2_path = temp_dir / t2.filename
         
         files_to_save = [
             (flair, flair_path, "FLAIR"),
-            (t1, t1_path, "T1"),
-            (t1ce, t1ce_path, "T1CE"),
-            (t2, t2_path, "T2")
+            (t1ce, t1ce_path, "T1CE")
         ]
         
         for upload_file, save_path, mod_name in files_to_save:
@@ -203,9 +192,7 @@ async def predict(
         logger.info("Processing prediction...")
         result = process_prediction(
             str(flair_path),
-            str(t1_path),
             str(t1ce_path),
-            str(t2_path),
             classes
         )
         
@@ -238,11 +225,11 @@ async def get_classes():
 
 @router.get("/modalities")
 async def get_modalities():
-    """Get required modality names (4 channels)."""
+    """Get required modality names (2 channels - matching Kaggle notebook)."""
     return {
         "modalities": settings.MODALITIES,
         "count": len(settings.MODALITIES),
-        "description": "All 4 BraTS modalities are required for prediction"
+        "description": "2 BraTS modalities required: FLAIR and T1CE (matching Kaggle notebook)"
     }
 
 

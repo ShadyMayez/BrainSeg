@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     print("=" * 60)
     print("🧠 Brain Tumor Segmentation API Starting...")
-    print(f"📦 Version: 2.0.0 (PyTorch)")
+    print(f"📦 Version: 2.0.0 (PyTorch - 2 Channel)")
     print(f"📁 Model path: {settings.get_model_path()}")
     print(f"📊 Data path: {settings.DATA_PATH}")
     print(f"🔢 Input channels: {settings.NUM_CHANNELS}")
@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title="Brain Tumor Segmentation API",
-    description="4-Channel MRI Analysis using PyTorch Deep Learning",
+    description="2-Channel MRI Analysis (FLAIR + T1CE) using PyTorch Deep Learning",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -143,6 +143,7 @@ app.include_router(data_analysis.router, prefix="/api/data", tags=["Data Analysi
 
 # Static files
 app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
+app.mount("/outputs", StaticFiles(directory=settings.OUTPUT_DIR), name="outputs")
 
 
 @app.get("/")

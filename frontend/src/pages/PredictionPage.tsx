@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Brain, Info, FileText, Activity } from 'lucide-react';
-import { predictionApi, healthApi } from '@/services/api';
+import { predictionApi } from '@/services/api';
 import type { PredictionResponse, FileUploadState } from '@/types';
 
 // UI Components (simplified inline versions)
-const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const Card = ({ children, className = '' }: CardProps) => (
   <div className={`bg-white rounded-xl shadow-lg border border-gray-200 ${className}`}>
     {children}
   </div>
@@ -14,27 +19,27 @@ const CardHeader = ({ children }: { children: React.ReactNode }) => (
   <div className="px-6 py-4 border-b border-gray-100">{children}</div>
 );
 
-const CardTitle = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-lg font-semibold text-gray-900">{children}</h3>
+const CardTitle = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>{children}</h3>
 );
 
 const CardDescription = ({ children }: { children: React.ReactNode }) => (
   <p className="text-sm text-gray-500 mt-1">{children}</p>
 );
 
-const CardContent = ({ children }: { children: React.ReactNode }) => (
-  <div className="p-6">{children}</div>
+const CardContent = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div className={`p-6 ${className}`}>{children}</div>
 );
 
-const Button = ({ 
-  children, 
-  onClick, 
-  disabled = false, 
+const Button = ({
+  children,
+  onClick,
+  disabled = false,
   variant = 'primary',
   className = ''
-}: { 
-  children: React.ReactNode; 
-  onClick?: () => void; 
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'outline';
   className?: string;
@@ -45,10 +50,10 @@ const Button = ({
     secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100',
     outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50 disabled:border-gray-300 disabled:text-gray-400'
   };
-  
+
   return (
-    <button 
-      onClick={onClick} 
+    <button
+      onClick={onClick}
       disabled={disabled}
       className={`${baseStyles} ${variants[variant]} ${className}`}
     >
@@ -62,7 +67,7 @@ const Alert = ({ type, title, message }: { type: 'error' | 'success'; title: str
     error: 'bg-red-50 border-red-200 text-red-800',
     success: 'bg-green-50 border-green-200 text-green-800'
   };
-  
+
   return (
     <div className={`p-4 rounded-lg border ${styles[type]} mb-4`}>
       <h4 className="font-semibold">{title}</h4>
@@ -124,7 +129,7 @@ const ResultsPanel = ({ results }: { results: PredictionResponse }) => (
         <p className="text-lg font-bold text-green-900 truncate">{results.model_used}</p>
       </div>
     </div>
-    
+
     <div>
       <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
         <Activity className="w-4 h-4" />
@@ -142,24 +147,24 @@ const ResultsPanel = ({ results }: { results: PredictionResponse }) => (
         ))}
       </div>
     </div>
-    
+
     {results.overlay_image && (
       <div>
         <h4 className="font-semibold text-gray-900 mb-3">Segmentation Overlay</h4>
-        <img 
+        <img
           src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${results.overlay_image}`}
           alt="Segmentation overlay"
           className="w-full rounded-lg border"
         />
       </div>
     )}
-    
+
     {results.segmentation_mask && (
       <div className="p-4 bg-gray-50 rounded-lg">
         <p className="text-sm text-gray-600">
           Segmentation mask saved. Download from:
         </p>
-        <a 
+        <a
           href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${results.segmentation_mask}`}
           className="text-blue-600 hover:underline text-sm break-all"
           download
@@ -174,9 +179,7 @@ const ResultsPanel = ({ results }: { results: PredictionResponse }) => (
 export function PredictionPage() {
   const [files, setFiles] = useState<FileUploadState>({
     flair: null,
-    t1: null,
     t1ce: null,
-    t2: null,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,20 +199,18 @@ export function PredictionPage() {
     fetchModelInfo();
   }, []);
 
-  const allFilesSelected = files.flair && files.t1 && files.t1ce && files.t2;
+  const allFilesSelected = files.flair && files.t1ce;
 
   const handlePredict = async () => {
     if (!allFilesSelected) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await predictionApi.predict({
         flair: files.flair!,
-        t1: files.t1!,
         t1ce: files.t1ce!,
-        t2: files.t2!,
       });
       setResults(result);
     } catch (err: any) {
@@ -220,7 +221,7 @@ export function PredictionPage() {
   };
 
   const handleReset = () => {
-    setFiles({ flair: null, t1: null, t1ce: null, t2: null });
+    setFiles({ flair: null, t1ce: null });
     setResults(null);
     setError(null);
   };
@@ -236,21 +237,19 @@ export function PredictionPage() {
           Tumor Segmentation Prediction
         </h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Upload all 4 MRI modalities to perform brain tumor segmentation using our PyTorch deep learning model.
+          Upload FLAIR and T1CE MRI modalities to perform brain tumor segmentation using our PyTorch deep learning model.
         </p>
-        
+
         {/* Model Status */}
         {modelInfo && (
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm mt-4 ${
-            modelInfo.model_loaded 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-yellow-100 text-yellow-800'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              modelInfo.model_loaded ? 'bg-green-500' : 'bg-yellow-500'
-            }`} />
-            {modelInfo.model_loaded 
-              ? `Model loaded (${modelInfo.input_channels} channels)` 
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm mt-4 ${modelInfo.model_loaded
+            ? 'bg-green-100 text-green-800'
+            : 'bg-yellow-100 text-yellow-800'
+            }`}>
+            <div className={`w-2 h-2 rounded-full ${modelInfo.model_loaded ? 'bg-green-500' : 'bg-yellow-500'
+              }`} />
+            {modelInfo.model_loaded
+              ? `Model loaded (${modelInfo.input_channels} channels)`
               : 'Model not loaded'}
           </div>
         )}
@@ -281,7 +280,7 @@ export function PredictionPage() {
           <CardHeader>
             <CardTitle>Upload MRI Modalities</CardTitle>
             <CardDescription>
-              All 4 modalities are required for accurate segmentation. Files should be in NIfTI format (.nii or .nii.gz).
+              2 modalities are required for segmentation (matching Kaggle notebook). Files should be in NIfTI format (.nii or .nii.gz).
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -293,22 +292,10 @@ export function PredictionPage() {
                 onChange={(file) => setFiles(prev => ({ ...prev, flair: file }))}
               />
               <FileUpload
-                label="T1"
-                description="Native T1-weighted"
-                file={files.t1}
-                onChange={(file) => setFiles(prev => ({ ...prev, t1: file }))}
-              />
-              <FileUpload
                 label="T1CE"
                 description="T1 with contrast enhancement"
                 file={files.t1ce}
                 onChange={(file) => setFiles(prev => ({ ...prev, t1ce: file }))}
-              />
-              <FileUpload
-                label="T2"
-                description="T2-weighted modality"
-                file={files.t2}
-                onChange={(file) => setFiles(prev => ({ ...prev, t2: file }))}
               />
             </div>
 
@@ -375,12 +362,12 @@ export function PredictionPage() {
         <CardContent className="py-4">
           <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
             <Info className="w-4 h-4" />
-            About the 4-Channel Model
+            About the 2-Channel Model
           </h4>
           <p className="text-sm text-blue-800">
-            This PyTorch U-Net model was trained on the BraTS 2020 dataset and uses all 4 MRI modalities 
-            (FLAIR, T1, T1CE, T2) for improved tumor segmentation accuracy. Each modality provides 
-            complementary information about different tissue characteristics.
+            This PyTorch U-Net model was trained on the BraTS 2020 dataset using 2 MRI modalities
+            (FLAIR and T1CE) for brain tumor segmentation. FLAIR highlights affected regions by
+            suppressing fluid signals, while T1CE provides enhanced visibility of abnormalities.
           </p>
         </CardContent>
       </Card>

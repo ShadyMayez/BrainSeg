@@ -13,7 +13,7 @@ function App() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Brain Tumor Segmentation</h1>
-                <p className="text-xs text-gray-500">PyTorch 4-Channel U-Net</p>
+                <p className="text-xs text-gray-500">PyTorch 2-Channel U-Net (FLAIR + T1CE)</p>
               </div>
             </div>
             <div className="text-sm text-gray-500">

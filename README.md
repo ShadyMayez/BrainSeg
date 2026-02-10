@@ -1,331 +1,160 @@
-# 🧠 Brain Tumor Segmentation
+# Brain Tumor Segmentation (BraTS 2020) 🧠
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
-[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.10+-orange.svg)](https://tensorflow.org/)
-[![React](https://img.shields.io/badge/React-18.2+-61DAFB.svg)](https://reactjs.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg)](https://fastapi.tiangolo.com/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.3+-38B2AC.svg)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0-red)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green)
+![React](https://img.shields.io/badge/React-18-cyan)
+![Docker](https://img.shields.io/badge/Docker-Enabled-blue)
 
-A production-ready web application for **3D Brain Tumor Segmentation** using deep learning. This project implements a **U-Net architecture with EfficientNetB0 backbone** trained on the BraTS 2020 dataset.
+A deep learning application for automated 3D brain tumor segmentation using the U-Net architecture. This project utilizes the BraTS 2020 dataset to identify and segment tumor sub-regions (edema, enhancing tumor, necrotic core) from multimodal MRI scans.
 
-## 🏗️ Architecture
+---
 
-This project uses a modern **full-stack architecture**:
+## 📑 Table of Contents
+- [Introduction](#-introduction)
+- [Dataset Details](#-dataset-details)
+- [Data Preprocessing](#-data-preprocessing)
+- [Model Architecture](#-model-architecture)
+- [Performance](#-performance)
+- [Deployment & Usage](#-deployment--usage)
+  - [Local Setup](#local-setup)
+  - [Docker Deployment](#docker-deployment)
+- [Project Structure](#-project-structure)
 
+---
+
+## 📌 Introduction
+Image segmentation plays a pivotal role in medical imaging by enabling precise delineation of anatomical structures and pathologies. In neuro-oncology, accurate segmentation of brain tumors from MRI scans is essential for diagnosis, treatment planning, and monitoring.
+
+This project implements a **2D U-Net** to process multi-modal MRI data (FLAIR and T1CE) and generate voxel-wise segmentation maps for:
+1.  **Necrotic/Core Tumor**
+2.  **Peritumoral Edema**
+3.  **Enhancing Tumor**
+
+---
+
+## 📂 Dataset Details
+The model is trained on the **[BraTS 2020 (Brain Tumor Segmentation) Challenge Dataset](https://www.kaggle.com/datasets/awsaf49/brats20-dataset-training-validation)**. The dataset consists of 3D MRI scans from glioma patients.
+
+### Modalities
+Each patient case includes 4 aligned 3D volumes:
+- **T1**: Native T1-weighted.
+- **T1CE**: Post-contrast T1-weighted (Contrast Enhanced).
+- **T2**: T2-weighted.
+- **FLAIR**: T2 Fluid Attenuated Inversion Recovery.
+
+> **Our Approach**: To optimize computational efficiency, we utilize only **T1CE** ( tumor core) and **FLAIR** (edema), reducing the input channels from 4 to 2.
+
+### Segmentation Classes
+The dataset includes expert annotations mapped to the following classes:
+- **Label 0**: Background / Not Tumor
+- **Label 1**: Necrotic and Non-Enhancing Tumor Core (NCR/NET)
+- **Label 2**: Peritumoral Edema (ED)
+- **Label 4**: GD-Enhancing Tumor (ET) -> *Remapped to Label 3 for continuity*
+
+---
+
+## 🛠️ Data Preprocessing
+To prepare the 3D MRI volumes for the 2D U-Net, the following pipeline is applied:
+
+1.  **Modality Selection**: Loading `_flair.nii` and `_t1ce.nii` files.
+2.  **Slice Extraction**: Processing 3D volumes as a stack of 2D slices. We focus on the central slices (approx. 60-135) where the tumor is most prominent.
+3.  **Resizing**: Images are resized from `240x240` to `128x128` to reduce memory usage.
+4.  **Normalization**: Min-Max scaling is applied to normalize pixel intensities to the `[0, 1]` range.
+5.  **One-Hot Encoding**: Segmentation masks are converted into 4-channel one-hot encoded tensors.
+
+---
+
+## 🏗️ Model Architecture
+We utilize the **U-Net** architecture, a standard for biomedical image segmentation. It consists of a contracting path (encoder) to capture context and a symmetric expanding path (decoder) for precise localization.
+
+### Key Features
+- **Encoder**: 5 blocks of Convolution + ReLU + Max Pooling.
+- **Decoder**: 4 blocks of Up-Sampling + Concatenation (Skip Connections) + Convolution.
+- **Input**: `(Batch, 2, 128, 128)` [FLAIR, T1CE].
+- **Output**: `(Batch, 4, 128, 128)` [Probability map for 4 classes].
+- **Parameters**: ~7.7 Million trainable parameters.
+
+---
+
+## 📊 Performance
+The model was evaluated on the test set using discrete segmentation metrics.
+
+| Metric | Score | Description |
+| :--- | :--- | :--- |
+| **Accuracy** | **99.36%** | Overall pixel-wise classification accuracy. |
+| **Sensitivity** | **99.15%** | True Positive Rate (Recall). |
+| **Specificity** | **99.78%** | True Negative Rate. |
+| **Precision** | **99.36%** | Positive Predictive Value. |
+| **Dice Score** | **0.6480** | F1-Score equivalent for segmentation overlap. |
+
+*Note: High accuracy is partially due to the class imbalance (large background area).*
+
+---
+
+## 🚀 Deployment & Usage
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- Docker (optional)
+
+### Local Setup
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/yourusername/BrainSeg.git
+    cd BrainSeg
+    ```
+
+2.  **Start the Application**:
+    Run the helper script to set up backend (FastAPI) and frontend (React) automatically.
+    ```powershell
+    ./run.bat
+    ```
+
+3.  **Access the Dashboard**:
+    - Frontend: `http://localhost:5173`
+    - Backend API: `http://localhost:8000`
+
+### 🐳 Docker Deployment
+Run the entire stack in isolated containers.
+
+1.  **Build and Run**:
+    ```powershell
+    docker-compose -f docker/docker-compose.yml up --build
+    ```
+
+2.  **Access App**:
+    - Web UI: `http://localhost:5173`
+
+---
+
+## � Project Structure
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Frontend (React)                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Prediction │  │   Analysis  │  │    About    │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│                                                              │
-│  React 18 + TypeScript + Vite + Tailwind CSS + Zustand      │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ REST API
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Backend (FastAPI)                        │
-│                                                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Prediction │  │    Data     │  │   Health    │         │
-│  │   Routes    │  │   Routes    │  │   Routes    │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│                                                              │
-│  FastAPI + TensorFlow + NiBabel + scikit-image              │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Model (U-Net)                            │
-│                                                              │
-│  Input: (128, 128, 3) → U-Net + EfficientNetB0 → (128,128,4)│
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 🌟 Features
-
-- **🖥️ Modern React Frontend**: Built with Vite, TypeScript, and Tailwind CSS
-- **⚡ FastAPI Backend**: High-performance Python API with async support
-- **🧠 Deep Learning Model**: U-Net with EfficientNetB0 for accurate segmentation
-- **📊 Interactive Visualizations**: Real-time MRI viewing with tumor overlay
-- **📈 Data Analysis Dashboard**: Explore dataset statistics and training metrics
-- **🏗️ MLOps Architecture**: Production-ready folder structure and best practices
-
-## 📁 Project Structure
-
-```
-brats_segmentation/
-├── backend/                    # FastAPI Backend
+BrainSeg/
+├── backend/                # FastAPI Application
 │   ├── src/
-│   │   ├── api/               # API routes
-│   │   │   └── routes/
-│   │   │       ├── health.py
-│   │   │       ├── prediction.py
-│   │   │       └── data_analysis.py
-│   │   ├── models/            # U-Net model
-│   │   │   └── unet_model.py
-│   │   ├── preprocessing/     # NIfTI loader
-│   │   │   └── nifti_loader.py
-│   │   ├── visualization/     # Plotting functions
-│   │   │   └── visualize.py
-│   │   ├── utils/             # Helper functions
-│   │   │   ├── config.py
-│   │   │   └── helpers.py
-│   │   └── main.py            # FastAPI entry point
-│   ├── requirements.txt
-│   └── tests/
+│   │   ├── models/         # U-Net PyTorch Implementation
+│   │   ├── api/            # API Routes
+│   │   └── preprocessing/  # NIfTI loading and tensor conversion
+│   └── requirements.txt
 │
-├── frontend/                   # React Frontend
+├── frontend/               # React + Vite Application
 │   ├── src/
-│   │   ├── components/        # UI components
-│   │   │   ├── Layout/        # Navbar, Sidebar
-│   │   │   ├── UI/            # Button, Card, etc.
-│   │   │   └── Prediction/    # FileUpload, ResultsPanel
-│   │   ├── pages/             # Page components
-│   │   │   ├── PredictionPage.tsx
-│   │   │   ├── DataAnalysisPage.tsx
-│   │   │   └── AboutPage.tsx
-│   │   ├── services/          # API client
-│   │   │   └── api.ts
-│   │   ├── store/             # State management (Zustand)
-│   │   │   └── useAppStore.ts
-│   │   ├── hooks/             # Custom hooks
-│   │   ├── types/             # TypeScript types
-│   │   └── styles/            # Tailwind CSS
-│   ├── package.json
-│   ├── tailwind.config.js
-│   └── vite.config.ts
+│   │   ├── pages/          # UI Pages
+│   │   └── components/     # Reusable Components
+│   └── package.json
 │
-├── data/                       # Dataset storage
-│   ├── raw/                   # Raw NIfTI files
-│   └── processed/             # Preprocessed data
-│
-├── models/                     # Saved model weights
-│   ├── saved_models/          # Best model
-│   └── checkpoints/           # Training checkpoints
-│
-├── docker/                     # Docker configuration
+├── docker/                 # Docker Configuration
 │   ├── Dockerfile.backend
 │   ├── Dockerfile.frontend
 │   └── docker-compose.yml
 │
-└── README.md                   # This file
+└── run.bat                 # Windows Startup Script
 ```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.8+ with pip
-- Node.js 18+ with npm/yarn
-- 8GB+ RAM recommended
-- GPU optional (CUDA-compatible for faster inference)
-
-### 1. Clone and Setup
-
-```bash
-git clone https://github.com/example/brats-segmentation.git
-cd brats-segmentation
-```
-
-### 2. Backend Setup
-
-```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-
-# Activate (Windows)
-venv\Scripts\activate
-
-# Activate (Linux/Mac)
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the backend
-python src/main.py
-```
-
-The backend will be available at `http://localhost:8000`
-
-API documentation: `http://localhost:8000/api/docs`
-
-### 3. Frontend Setup
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Run the frontend
-npm run dev
-```
-
-The frontend will be available at `http://localhost:5173`
-
-### 4. Add Model (Optional)
-
-Place your trained model at:
-```
-models/saved_models/best_model.keras
-```
-
-## 📖 Usage
-
-### Web Application
-
-1. Navigate to `http://localhost:5173`
-2. Go to the **Prediction** page
-3. Upload 3 NIfTI files:
-   - FLAIR modality (`*_flair.nii`)
-   - T1ce modality (`*_t1ce.nii`)
-   - T2 modality (`*_t2.nii`)
-4. Click **"Run Segmentation"**
-5. View results with tumor overlay and statistics
-
-### API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health/` | GET | Health check |
-| `/api/health/model` | GET | Model status |
-| `/api/predict/` | POST | Run segmentation |
-| `/api/predict/classes` | GET | Get class info |
-| `/api/data/dataset-info` | GET | Dataset overview |
-| `/api/data/training-metrics` | GET | Training metrics |
-| `/api/data/model-architecture` | GET | Model architecture |
-
-## 🔬 Preprocessing Pipeline
-
-The preprocessing follows the exact pipeline from the BraTS 2020 notebook:
-
-1. **Load NIfTI files** using nibabel
-2. **Normalize** each modality: `(img - min) / (max - min)`
-3. **Select 3 channels**: FLAIR, T1ce, T2 (excludes T1)
-4. **Crop slices**: Remove 60 slices from start and end
-5. **Resize** to 128×128 using bilinear interpolation
-6. **One-hot encode** masks to 4 classes
-
-### 4-Channel to 3-Channel Conversion
-
-```python
-# Original BraTS: 4 modalities
-modalities = ['flair', 't1', 't1ce', 't2']
-
-# Model input: 3 modalities (excludes t1)
-selected_modalities = ['flair', 't1ce', 't2']
-
-# Stack into 3-channel volume
-image = np.stack([flair, t1ce, t2], axis=-1)  # Shape: (H, W, D, 3)
-```
-
-## 📊 Performance Metrics
-
-| Metric | Training | Validation |
-|--------|----------|------------|
-| Accuracy | ~99% | ~98.8% |
-| Dice Coefficient | ~0.99 | ~0.98 |
-| Precision | ~0.97 | ~0.96 |
-| Sensitivity | ~0.96 | ~0.95 |
-| Specificity | ~0.99 | ~0.99 |
-
-### Training Configuration
-
-- **Epochs**: 30
-- **Batch Size**: 16
-- **Optimizer**: Adam
-- **Loss**: Weighted Dice Loss
-- **Class Weights**: [0.45, 0.25, 0.20, 0.20]
-
-## 🐳 Docker Deployment
-
-```bash
-# Build and run with Docker Compose
-docker-compose up --build
-
-# Or build separately
-docker-compose up --build backend
-docker-compose up --build frontend
-```
-
-Access the application:
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:8000`
-- API Docs: `http://localhost:8000/api/docs`
-
-## 🧪 Testing
-
-### Backend Tests
-```bash
-cd backend
-pytest tests/
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm test
-```
-
-## 📚 Dataset
-
-This project uses the **BraTS 2020** (Brain Tumor Segmentation) dataset:
-
-- **Training Set**: 294 patients
-- **Validation Set**: 74 patients
-- **Total Slices**: 12,880
-- **Modalities**: FLAIR, T1, T1ce, T2
-- **Annotations**: Expert-annotated segmentation masks
-
-Download from: [CBICA BraTS](https://www.med.upenn.edu/cbica/brats/)
-
-## 📝 Citation
-
-If you use this project in your research, please cite:
-
-```bibtex
-@article{brats2020,
-  title={The Multimodal Brain Tumor Image Segmentation Benchmark (BRATS)},
-  author={Menze, Bjoern H et al.},
-  journal={IEEE Transactions on Medical Imaging},
-  year={2015}
-}
-
-@inproceedings{unet2015,
-  title={U-Net: Convolutional Networks for Biomedical Image Segmentation},
-  author={Ronneberger, Olaf et al.},
-  booktitle={MICCAI},
-  year={2015}
-}
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [BraTS Challenge](https://www.med.upenn.edu/cbica/brats/) for the dataset
-- [TensorFlow](https://tensorflow.org/) for the deep learning framework
-- [FastAPI](https://fastapi.tiangolo.com/) for the backend framework
-- [React](https://reactjs.org/) for the frontend framework
-- [Tailwind CSS](https://tailwindcss.com/) for styling
-
-## 📞 Contact
-
-For questions or support, please open an issue on GitHub.
 
 ---
 
-<p align="center">
-  🧠 Built with ❤️ for advancing medical AI research
-</p>
+## 📚 References
+- **U-Net**: [Ronneberger et al., 2015](https://arxiv.org/abs/1505.04597)
+- **BraTS 2020 Data**: [Kaggle Dataset](https://www.kaggle.com/datasets/awsaf49/brats20-dataset-training-validation)

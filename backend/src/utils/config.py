@@ -24,6 +24,7 @@ class Settings:
     OUTPUT_DIR = BASE_DIR / "outputs"
     
     # Model path - now expects PyTorch .pth file
+    # Use relative path for portability (Docker/Linux support)
     MODEL_PATH = MODELS_DIR / "saved_models" / "final_model.pth"
     
     # Alternative model paths to try
@@ -64,7 +65,7 @@ class Settings:
     VOLUME_SLICES = 100
     VOLUME_START_AT = 22
     NUM_CLASSES = 4
-    NUM_CHANNELS = 4  # Changed from 3 to 4 (flair, t1, t1ce, t2)
+    NUM_CHANNELS = 2  # 2 channels: flair, t1ce (matching Kaggle notebook)
     
     # Class labels
     CLASS_LABELS = {
@@ -81,8 +82,8 @@ class Settings:
         3: "#00FFFF"   # Cyan
     }
     
-    # Modality names (4 channels)
-    MODALITIES = ["flair", "t1", "t1ce", "t2"]
+    # Modality names (2 channels - matching Kaggle notebook)
+    MODALITIES = ["flair", "t1ce"]
     
     @classmethod
     def get_model_path(cls) -> Path:

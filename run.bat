@@ -76,9 +76,9 @@ if not exist "..\models\checkpoints" mkdir ..\models\checkpoints
 if not exist "uploads" mkdir uploads
 if not exist "outputs" mkdir outputs
 
-if not exist "..\models\saved_models\best_model.keras" (
-    echo Warning: Model not found at models\saved_models\best_model.keras
-    echo Please place your trained model in this location
+if not exist "..\models\saved_models\final_model.pth" (
+    echo Warning: Model not found at models\saved_models\final_model.pth
+    echo Please place your trained PyTorch model in this location
 )
 
 echo Backend starting at http://localhost:8000

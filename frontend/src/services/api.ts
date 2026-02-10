@@ -42,7 +42,7 @@ export const healthApi = {
     const response = await api.get('/health/');
     return response.data;
   },
-  
+
   async checkModel(): Promise<{
     model_path: string;
     exists: boolean;
@@ -51,12 +51,12 @@ export const healthApi = {
     const response = await api.get('/health/model');
     return response.data;
   },
-  
+
   async getConfig() {
     const response = await api.get('/health/config');
     return response.data;
   },
-  
+
   async getEnvironment() {
     const response = await api.get('/health/environment');
     return response.data;
@@ -66,16 +66,12 @@ export const healthApi = {
 export const predictionApi = {
   async predict(files: {
     flair: File;
-    t1: File;
     t1ce: File;
-    t2: File;
   }): Promise<PredictionResponse> {
     const formData = new FormData();
     formData.append('flair', files.flair);
-    formData.append('t1', files.t1);
     formData.append('t1ce', files.t1ce);
-    formData.append('t2', files.t2);
-    
+
     const response = await api.post<PredictionResponse>('/predict/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -89,12 +85,12 @@ export const predictionApi = {
     });
     return response.data;
   },
-  
+
   async getClasses(): Promise<Record<number, string>> {
     const response = await api.get('/predict/classes');
     return response.data;
   },
-  
+
   async getModalities(): Promise<{
     modalities: string[];
     count: number;
@@ -103,7 +99,7 @@ export const predictionApi = {
     const response = await api.get('/predict/modalities');
     return response.data;
   },
-  
+
   async getModelInfo() {
     const response = await api.get('/predict/model-info');
     return response.data;
@@ -115,12 +111,12 @@ export const dataApi = {
     const response = await api.get('/data/dataset-info');
     return response.data;
   },
-  
+
   async getFeatureStatistics() {
     const response = await api.get('/data/feature-statistics');
     return response.data;
   },
-  
+
   async getTrainingMetrics() {
     const response = await api.get('/data/training-metrics');
     return response.data;

@@ -25,9 +25,7 @@ export interface HealthStatus {
 
 export interface FileUploadState {
   flair: File | null;
-  t1: File | null;
   t1ce: File | null;
-  t2: File | null;
 }
 
 export interface ModalityInfo {
@@ -36,6 +34,7 @@ export interface ModalityInfo {
   required: boolean;
 }
 
+// Only 2 modalities required (matching Kaggle notebook)
 export const MODALITIES: ModalityInfo[] = [
   {
     name: 'flair',
@@ -43,18 +42,8 @@ export const MODALITIES: ModalityInfo[] = [
     required: true
   },
   {
-    name: 't1',
-    description: 'T1-weighted - Native T1 imaging',
-    required: true
-  },
-  {
     name: 't1ce',
     description: 'T1CE - T1 with Gadolinium contrast enhancement',
-    required: true
-  },
-  {
-    name: 't2',
-    description: 'T2-weighted - T2 imaging',
     required: true
   }
 ];

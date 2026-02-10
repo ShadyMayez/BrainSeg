@@ -20,15 +20,15 @@ class BraTSPreprocessor:
     """
     Preprocessor for BraTS brain tumor MRI data.
     Implements the exact preprocessing pipeline from the notebook:
-    1. Load 4 modalities (flair, t1, t1ce, t2)
+    1. Load 2 modalities (flair, t1ce) - matching Kaggle notebook
     2. Normalize each modality to [0, 1]
-    3. Stack into 4-channel volume
+    3. Stack into 2-channel volume
     4. Process slices (VOLUME_START_AT to VOLUME_START_AT + VOLUME_SLICES)
     5. Resize to (128, 128)
     """
     
-    # All 4 modalities as used in the notebook
-    MODALITIES = ['flair', 't1', 't1ce', 't2']
+    # 2 modalities as used in the Kaggle notebook
+    MODALITIES = ['flair', 't1ce']
     
     # Class labels (same as notebook)
     CLASS_LABELS = {
@@ -77,6 +77,7 @@ class BraTSPreprocessor:
         logger.info(f"  Volume slices: {volume_slices}")
         logger.info(f"  Volume start: {volume_start_at}")
         logger.info(f"  Num classes: {num_classes}")
+        logger.info(f"  Input channels: 2 (flair, t1ce)")
     
     def load_nifti(self, filepath: str) -> np.ndarray:
         """
@@ -129,73 +130,64 @@ class BraTSPreprocessor:
     def preprocess_for_inference(
         self,
         flair_path: str,
-        t1_path: str,
-        t1ce_path: str,
-        t2_path: str
+        t1ce_path: str
     ) -> Dict:
         """
-        Preprocess 4 modalities for model inference.
+        Preprocess 2 modalities for model inference (matching Kaggle notebook).
         
         Args:
             flair_path: Path to FLAIR NIfTI file
-            t1_path: Path to T1 NIfTI file
             t1ce_path: Path to T1CE NIfTI file
-            t2_path: Path to T2 NIfTI file
         
         Returns:
             Dictionary containing:
-                - 'model_input': Preprocessed data for model (VOLUME_SLICES, 4, H, W)
+                - 'model_input': Preprocessed data for model (VOLUME_SLICES, 2, H, W)
                 - 'original_shape': Original volume shape
                 - 'modalities': List of modality names
         """
-        logger.info("Starting preprocessing for inference...")
+        logger.info("Starting preprocessing for inference (2-channel)...")
         
-        # Load all 4 modalities
-        logger.info("Loading modalities...")
+        # Load 2 modalities (matching Kaggle notebook)
+        logger.info("Loading modalities (flair, t1ce)...")
         flair = self.load_nifti(flair_path)
-        t1 = self.load_nifti(t1_path)
         t1ce = self.load_nifti(t1ce_path)
-        t2 = self.load_nifti(t2_path)
         
         original_shape = flair.shape
         logger.info(f"Original shape: {original_shape}")
         
-        # Verify all modalities have same shape
-        for name, data in [('flair', flair), ('t1', t1), ('t1ce', t1ce), ('t2', t2)]:
-            if data.shape != original_shape:
-                raise ValueError(
-                    f"Shape mismatch: {name} has shape {data.shape}, "
-                    f"expected {original_shape}"
-                )
+        # Verify modalities have same shape
+        if t1ce.shape != original_shape:
+            raise ValueError(
+                f"Shape mismatch: t1ce has shape {t1ce.shape}, "
+                f"expected {original_shape}"
+            )
         
         # Normalize each modality
         logger.info("Normalizing modalities...")
         flair = self.normalize_modality(flair)
-        t1 = self.normalize_modality(t1)
         t1ce = self.normalize_modality(t1ce)
-        t2 = self.normalize_modality(t2)
         
-        # Initialize output array: (VOLUME_SLICES, 4, H, W)
-        # This matches the notebook's expected input format
+        # Get number of slices from input volume
+        # Typically (H, W, D), so shape[2] is depth/slices
+        num_slices = flair.shape[2]
+        
+        # Initialize output array: (num_slices, 2, H, W)
+        # Use all slices as requested by user
         model_input = np.zeros(
-            (self.volume_slices, 4, self.target_size[0], self.target_size[1]),
+            (num_slices, 2, self.target_size[0], self.target_size[1]),
             dtype=np.float32
         )
         
         # Process each slice
-        logger.info(f"Processing {self.volume_slices} slices...")
-        for j in range(self.volume_slices):
-            slice_pos = j + self.volume_start_at
+        logger.info(f"Processing all {num_slices} slices...")
+        for j in range(num_slices):
+            # No offset, start from 0
             
             # Extract and resize each modality slice
             # Channel 0: FLAIR
-            model_input[j, 0, :, :] = self.resize_slice(flair[:, :, slice_pos])
-            # Channel 1: T1
-            model_input[j, 1, :, :] = self.resize_slice(t1[:, :, slice_pos])
-            # Channel 2: T1CE
-            model_input[j, 2, :, :] = self.resize_slice(t1ce[:, :, slice_pos])
-            # Channel 3: T2
-            model_input[j, 3, :, :] = self.resize_slice(t2[:, :, slice_pos])
+            model_input[j, 0, :, :] = self.resize_slice(flair[:, :, j])
+            # Channel 1: T1CE
+            model_input[j, 1, :, :] = self.resize_slice(t1ce[:, :, j])
         
         logger.info(f"Preprocessing complete. Output shape: {model_input.shape}")
         
@@ -208,27 +200,23 @@ class BraTSPreprocessor:
     def preprocess_with_segmentation(
         self,
         flair_path: str,
-        t1_path: str,
         t1ce_path: str,
-        t2_path: str,
         seg_path: str
     ) -> Dict:
         """
-        Preprocess 4 modalities with ground truth segmentation.
+        Preprocess 2 modalities with ground truth segmentation.
         Used for training/validation, not inference.
         
         Args:
             flair_path: Path to FLAIR NIfTI file
-            t1_path: Path to T1 NIfTI file
             t1ce_path: Path to T1CE NIfTI file
-            t2_path: Path to T2 NIfTI file
             seg_path: Path to segmentation NIfTI file
         
         Returns:
             Dictionary containing preprocessed data and ground truth
         """
         # Get model input
-        result = self.preprocess_for_inference(flair_path, t1_path, t1ce_path, t2_path)
+        result = self.preprocess_for_inference(flair_path, t1ce_path)
         
         # Load segmentation
         seg = self.load_nifti(seg_path)
@@ -295,21 +283,17 @@ class BraTSPreprocessor:
         return output_volume
 
 
-def load_and_preprocess_4channel(
+def load_and_preprocess_2channel(
     flair_path: str,
-    t1_path: str,
     t1ce_path: str,
-    t2_path: str,
     target_size: Tuple[int, int] = (128, 128)
 ) -> np.ndarray:
     """
-    Convenience function to load and preprocess 4-channel BraTS data.
+    Convenience function to load and preprocess 2-channel BraTS data.
     
     Args:
         flair_path: Path to FLAIR NIfTI file
-        t1_path: Path to T1 NIfTI file
         t1ce_path: Path to T1CE NIfTI file
-        t2_path: Path to T2 NIfTI file
         target_size: Target size for resizing
     
     Returns:
@@ -317,6 +301,6 @@ def load_and_preprocess_4channel(
     """
     preprocessor = BraTSPreprocessor(target_size=target_size)
     result = preprocessor.preprocess_for_inference(
-        flair_path, t1_path, t1ce_path, t2_path
+        flair_path, t1ce_path
     )
     return result['model_input']
